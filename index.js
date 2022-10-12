@@ -67,58 +67,54 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function(bot, 
 /* On mention with command, using other trigger data, can use lite markdown formatting
 ex User enters @botname 'info' phrase, the bot will provide personal details
 */
-framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, trigger) {
-  console.log("a moonboi has entered the chat");
-  responded = true;
-  
-  bot.say("markdown", outputString);
-});
+
 
 /* On mention with bot data 
 ex User enters @botname 'space' phrase, the bot will provide details about that particular space
 */
-framework.hears('space', function(bot) {
-  console.log("space. the final frontier");
-  responded = true;
-  let roomTitle = bot.room.title;
-  let spaceID = bot.room.id;
-  let roomType = bot.room.type;
+// framework.hears('space', function(bot) {
+//   console.log("space. the final frontier");
+//   responded = true;
+//   let roomTitle = bot.room.title;
+//   let spaceID = bot.room.id;
+//   let roomType = bot.room.type;
 
-  let outputString = `The title of this space: ${roomTitle} \n\n The roomID of this space: ${spaceID} \n\n The type of this space: ${roomType}`;
+//   let outputString = `The title of this space: ${roomTitle} \n\n The roomID of this space: ${spaceID} \n\n The type of this space: ${roomType}`;
 
-  console.log(outputString);
-  bot.say("markdown", outputString)
-    .catch((e) => console.error(`bot.say failed: ${e.message}`));
+//   console.log(outputString);
+//   bot.say("markdown", outputString)
+//     .catch((e) => console.error(`bot.say failed: ${e.message}`));
 
-});
+// });
 
 /* 
    Say hi to every member in the space
    This demonstrates how developers can access the webex
    sdk to call any Webex API.  API Doc: https://webex.github.io/webex-js-sdk/api/
 */
-framework.hears("say hi to everyone", function(bot) {
-  console.log("say hi to everyone.  Its a party");
-  responded = true;
-  // Use the webex SDK to get the list of users in this space
-  bot.webex.memberships.list({ roomId: bot.room.id })
-    .then((memberships) => {
-      for (const member of memberships.items) {
-        if (member.personId === bot.person.id) {
-          // Skip myself!
-          continue;
-        }
-        let displayName = (member.personDisplayName) ? member.personDisplayName : member.personEmail;
-        bot.say(`Hello ${displayName}`);
-      }
-    })
-    .catch((e) => {
-      console.error(`Call to sdk.memberships.get() failed: ${e.messages}`);
-      bot.say('Hello everybody!');
-    });
-});
+// framework.hears("say hi to everyone", function(bot) {
+//   console.log("say hi to everyone.  Its a party");
+//   responded = true;
+//   // Use the webex SDK to get the list of users in this space
+//   bot.webex.memberships.list({ roomId: bot.room.id })
+//     .then((memberships) => {
+//       for (const member of memberships.items) {
+//         if (member.personId === bot.person.id) {
+//           // Skip myself!
+//           continue;
+//         }
+//         let displayName = (member.personDisplayName) ? member.personDisplayName : member.personEmail;
+//         bot.say(`Hello ${displayName}`);
+//       }
+//     })
+//     .catch((e) => {
+//       console.error(`Call to sdk.memberships.get() failed: ${e.messages}`);
+//       bot.say('Hello everybody!');
+//     });
+// });
 
 // Buttons & Cards data
+// example card
 let cardJSON =
 {
   $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -157,36 +153,6 @@ let cardJSON =
         }]
     }]
 };
-
-/* On mention with card example
-ex User enters @botname 'card me' phrase, the bot will produce a personalized card - https://developer.webex.com/docs/api/guides/cards
-*/
-framework.hears('card me', function(bot, trigger) {
-  console.log("someone asked for a card");
-  responded = true;
-  let avatar = trigger.person.avatar;
-
-  cardJSON.body[0].columns[0].items[0].url = (avatar) ? avatar : `${config.webhookUrl}/missing-avatar.jpg`;
-  cardJSON.body[0].columns[0].items[1].text = trigger.person.displayName;
-  cardJSON.body[0].columns[0].items[2].text = trigger.person.emails[0];
-  bot.sendCard(cardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
-});
-
-/* On mention reply example
-ex User enters @botname 'reply' phrase, the bot will post a threaded reply
-*/
-framework.hears('reply', function(bot, trigger) {
-  console.log("someone asked for a reply.  We will give them two.");
-  responded = true;
-  bot.reply(trigger.message,
-    'This is threaded reply sent using the `bot.reply()` method.',
-    'markdown');
-  var msg_attach = {
-    text: "This is also threaded reply with an attachment sent via bot.reply(): ",
-    file: 'https://media2.giphy.com/media/dTJd5ygpxkzWo/giphy-downsized-medium.gif'
-  };
-  bot.reply(trigger.message, msg_attach);
-});
 
 let coinCardJSON = {
   "type": "AdaptiveCard",
@@ -274,24 +240,235 @@ let coinCardJSON = {
       ]
     }
   ]
-}
-/* On mention with coin me
-ex User enters @botname 'coin me' phrase, the bot will produce a personalized card - https://developer.webex.com/docs/api/guides/cards
+};
+
+// this is a card that will be used to check the 'all time high' of a given coin-currency pair
+let moonCardJSON = {
+    "type": "AdaptiveCard",
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.2",
+    "body": [
+        {
+            "type": "TextBlock",
+            "text": "Hello an0n, pick your moonshot.",
+            "wrap": true,
+            "fontType": "Monospace",
+            "size": "Medium",
+            "weight": "Bolder",
+            "color": "Default"
+        },
+        {
+            "type": "Input.ChoiceSet",
+            "choices": [
+                {
+                    "title": "Bitcoin",
+                    "value": "bitcoin"
+                },
+                {
+                    "title": "Ethereum",
+                    "value": "ethereum"
+                },
+                {
+                    "title": "BNB",
+                    "value": "binancecoin"
+                },
+                {
+                    "title": "XRP",
+                    "value": "ripple"
+                },
+                {
+                    "title": "Cardano",
+                    "value": "cardano"
+                },
+                {
+                    "title": "Solana",
+                    "value": "solana"
+                },
+                {
+                    "title": "Dogecoin",
+                    "value": "dogecoin"
+                },
+                {
+                    "title": "Polkadot",
+                    "value": "polkadot"
+                },
+                {
+                    "title": "Shiba Inu",
+                    "value": "shiba-inu"
+                },
+                {
+                    "title": "Polygon",
+                    "value": "matic-network"
+                },
+                {
+                    "title": "Tron",
+                    "value": "tron"
+                },
+                {
+                    "title": "Lido Staked Ether",
+                    "value": "staked-ether"
+                },
+                {
+                    "title": "Avalanche",
+                    "value": "avalanche-2"
+                },
+                {
+                    "title": "Uniswap",
+                    "value": "uniswap"
+                },
+                {
+                    "title": "Chainlink",
+                    "value": "chainlink"
+                },
+                {
+                    "title": "Algorand",
+                    "value": "algorand"
+                },
+                {
+                    "title": "Filecoin",
+                    "value": "filecoin"
+                },
+                {
+                    "title": "Aave",
+                    "value": "aave"
+                },
+                {
+                    "title": "Maker",
+                    "value": "maker"
+                },
+                {
+                    "title": "Ethereum Name Service",
+                    "value": "ethereum-name-service"
+                }
+            ],
+            "placeholder": "Pick a coin",
+            "id": "coinId"
+        },
+        {
+            "type": "Input.ChoiceSet",
+            "choices": [
+                {
+                    "title": "US Dollar",
+                    "value": "usd"
+                },
+                {
+                    "title": "Euro",
+                    "value": "eur"
+                },
+                {
+                    "title": "Japanese Yen",
+                    "value": "jpy"
+                },
+                {
+                    "title": "Pound Sterling",
+                    "value": "gbp"
+                },
+                {
+                    "title": "Australian Dollar",
+                    "value": "aud"
+                },
+                {
+                    "title": "Chinese Renminbi",
+                    "value": "cny"
+                },
+                {
+                    "title": "Canadian Dollar",
+                    "value": "cad"
+                },
+                {
+                    "title": "Swiss Franc",
+                    "value": "chf"
+                },
+                {
+                    "title": "Hong Kong Dollar",
+                    "value": "hkd"
+                },
+                {
+                    "title": "New Zealand Dollar",
+                    "value": "nzd"
+                }
+            ],
+            "placeholder": "Currency pair",
+            "id": "currencyPair",
+            "value": "usd"
+        },
+        {
+            "type": "ActionSet",
+            "actions": [
+                {
+                    "type": "Action.Submit",
+                    "title": "Check moonlinessz"
+                }
+            ],
+            "id": "submit"
+        }
+    ]
+};
+
+/* On mention with card example
+ex User enters @botname 'card me' phrase, the bot will produce a personalized card - https://developer.webex.com/docs/api/guides/cards
+*/
+framework.hears('card me', function(bot, trigger) {
+  console.log("someone asked for a card");
+  responded = true;
+  let avatar = trigger.person.avatar;
+
+  cardJSON.body[0].columns[0].items[0].url = (avatar) ? avatar : `${config.webhookUrl}/missing-avatar.jpg`;
+  cardJSON.body[0].columns[0].items[1].text = trigger.person.displayName;
+  cardJSON.body[0].columns[0].items[2].text = trigger.person.emails[0];
+  bot.sendCard(cardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
+});
+
+/* On mention reply example
+ex User enters @botname 'reply' phrase, the bot will post a threaded reply
+*/
+framework.hears('reply', function(bot, trigger) {
+  console.log("someone asked for a reply.  We will give them two.");
+  responded = true;
+  bot.reply(trigger.message,
+    'This is threaded reply sent using the `bot.reply()` method.',
+    'markdown');
+  var msg_attach = {
+    text: "This is also threaded reply with an attachment sent via bot.reply(): ",
+    file: 'https://media2.giphy.com/media/dTJd5ygpxkzWo/giphy-downsized-medium.gif'
+  };
+  bot.reply(trigger.message, msg_attach);
+});
+
+
+/* On mention with prices
+ex User enters @botname 'prices' phrase,- bot will repond with card that offers currencies and returns price
+https://developer.webex.com/docs/api/guides/cards
 */
 framework.hears('prices', function(bot, trigger) {
   console.log("someone asked for a card");
   responded = true;
   bot.sendCard(coinCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
 });
+/* On mention with prices
+ex User enters @botname 'wen moon'  or other phrase below,- bot will repond with card that gives "moonlinessz" rating and market data printout in markdown
+https://developer.webex.com/docs/api/guides/cards
+*/
+framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, trigger) {
+  console.log("a moonboi has entered the chat");
+  responded = true;
+  
+  bot.sendCard(moonCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
+});
 
 // Process an Action.Submit button press
 framework.on('attachmentAction', function(bot, trigger) {
+  // console.log("bot line 452: ", bot, "trigger line 452: ", trigger)
   if (trigger.type != 'attachmentAction') {
     throw new Error(`Invaid trigger type: ${trigger.type} in attachmentAction handler`);
   }
   let attachmentAction = trigger.attachmentAction;
   console.log(attachmentAction);
-  getCurrency(bot, attachmentAction);
+  if (attachmentAction.inputs.currency) {
+    getCurrency(bot, attachmentAction);
+  } else {
+    getMoonlinessz(bot, attachmentAction, trigger);
+  }
   responded = true;
 
 });
@@ -331,8 +508,64 @@ const getCurrency = (bot, attachment) => {
     });
   });
   req.end();
-}
+};
 
+/*This function will take bot instance and trigger object as parameters and return moonlinessz, bro */
+const getMoonlinessz = (bot, attachment, trigger) => {
+  let currencyPair = attachment.inputs.currencyPair;
+  const options = {
+    method: 'GET',
+    hostname: 'api.coingecko.com',
+    path: `/api/v3/coins/${attachment.inputs.coinId}`,
+    port: 443,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  const req = https.request(options, (res) => {
+    console.log(`statusCode: ${res.statusCode}`);
+    let data = '';
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+    res.on('end', async () => {
+      // parse API 'string' response to {JSON} object
+      const dataJson = await JSON.parse(data);
+      // save moon data in lil package here
+      let moonData = {
+        currentPrice: dataJson.market_data.current_price[currencyPair],
+        ath: dataJson.market_data.ath[currencyPair],
+        athChange: dataJson.market_data.ath_change_percentage[currencyPair],
+        athDate: dataJson.market_data.ath_date[currencyPair],
+        atl: dataJson.market_data.atl[currencyPair],
+        atlChange: dataJson.market_data.atl_change_percentage[currencyPair],
+        atlDate: dataJson.market_data.atl_date[currencyPair],
+        priceChange60Day: dataJson.market_data.price_change_percentage_60d,
+        moonlinessz: ''
+        
+      };
+      // add moonlinessz opinion after some processing
+      if(moonData.priceChange60Day > 0) {
+        moonData.moonlinessz = 'WAGMI';
+      } else {
+        moonData.moonlinessz = 'NGMI';
+      };
+      let msg_attach = {
+        text: moonData.moonlinessz,
+        file: `${dataJson.image.large}`
+      };
+      bot.say(msg_attach);
+      bot.say('markdown', '**moon report**');
+      
+      console.log(` moon data fetched successfully: moonData: `, moonData);
+      
+    });
+    res.on('error', (e) => {
+      console.error(`Error: ${e.message}`);
+    });
+  });
+  req.end();
+};
 
 
 
@@ -426,9 +659,9 @@ function sendHelp(bot) {
     '3. **ethereum**  (fetches the current price of 1 ETH in USD) \n' +
     '4. **prices** (pick a coin/currency pair and check latest price) \n' +
     '5. **say hi to everyone** (everyone gets a greeting using a call to the Webex SDK) \n' +
-    '6. ***ath/ wen moon***' +
-    '6. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
-    '7. **help** (what you are reading now)');
+    '6. ***ath/ wen moon*** \n' +
+    '7. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
+    '8. **help** (what you are reading now)');
 }
 
 
