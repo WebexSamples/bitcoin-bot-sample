@@ -15,7 +15,7 @@ var framework = new framework(config);
 framework.start();
 console.log("Starting framework, please wait...");
 
-framework.on("initialized", function() {
+framework.on("initialized", () => {
   console.log("framework is all fired up! [Press CTRL-C to quit]");
 });
 
@@ -63,97 +63,8 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function(bot, 
     .then(() => sendHelp(bot))
     .catch((e) => console.error(`Problem in help hander: ${e.message}`));
 });
-
-/* On mention with command, using other trigger data, can use lite markdown formatting
-ex User enters @botname 'info' phrase, the bot will provide personal details
-*/
-
-
-/* On mention with bot data 
-ex User enters @botname 'space' phrase, the bot will provide details about that particular space
-*/
-// framework.hears('space', function(bot) {
-//   console.log("space. the final frontier");
-//   responded = true;
-//   let roomTitle = bot.room.title;
-//   let spaceID = bot.room.id;
-//   let roomType = bot.room.type;
-
-//   let outputString = `The title of this space: ${roomTitle} \n\n The roomID of this space: ${spaceID} \n\n The type of this space: ${roomType}`;
-
-//   console.log(outputString);
-//   bot.say("markdown", outputString)
-//     .catch((e) => console.error(`bot.say failed: ${e.message}`));
-
-// });
-
-/* 
-   Say hi to every member in the space
-   This demonstrates how developers can access the webex
-   sdk to call any Webex API.  API Doc: https://webex.github.io/webex-js-sdk/api/
-*/
-// framework.hears("say hi to everyone", function(bot) {
-//   console.log("say hi to everyone.  Its a party");
-//   responded = true;
-//   // Use the webex SDK to get the list of users in this space
-//   bot.webex.memberships.list({ roomId: bot.room.id })
-//     .then((memberships) => {
-//       for (const member of memberships.items) {
-//         if (member.personId === bot.person.id) {
-//           // Skip myself!
-//           continue;
-//         }
-//         let displayName = (member.personDisplayName) ? member.personDisplayName : member.personEmail;
-//         bot.say(`Hello ${displayName}`);
-//       }
-//     })
-//     .catch((e) => {
-//       console.error(`Call to sdk.memberships.get() failed: ${e.messages}`);
-//       bot.say('Hello everybody!');
-//     });
-// });
-
 // Buttons & Cards data
-// example card
-let cardJSON =
-{
-  $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-  type: 'AdaptiveCard',
-  version: '1.0',
-  body:
-    [{
-      type: 'ColumnSet',
-      columns:
-        [{
-          type: 'Column',
-          width: '5',
-          items:
-            [{
-              type: 'Image',
-              url: 'Your avatar appears here!',
-              size: 'large',
-              horizontalAlignment: "Center",
-              style: 'person'
-            },
-            {
-              type: 'TextBlock',
-              text: 'Your name will be here!',
-              size: 'medium',
-              horizontalAlignment: "Center",
-              weight: 'Bolder'
-            },
-            {
-              type: 'TextBlock',
-              text: 'And your email goes here!',
-              size: 'small',
-              horizontalAlignment: "Center",
-              isSubtle: true,
-              wrap: false
-            }]
-        }]
-    }]
-};
-
+// this card is for the 'prices' command
 let coinCardJSON = {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -242,7 +153,7 @@ let coinCardJSON = {
   ]
 };
 
-// this is a card that will be used to check the 'all time high' of a given coin-currency pair
+// this is card is for the 'wen moon' command'
 let moonCardJSON = {
     "type": "AdaptiveCard",
     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
@@ -405,170 +316,30 @@ let moonCardJSON = {
     ]
 };
 
-/* On mention with card example
-ex User enters @botname 'card me' phrase, the bot will produce a personalized card - https://developer.webex.com/docs/api/guides/cards
+/* On mention explain
+User enters @botname 'explain' bot will respond with a simple explanation of what it's purpose is 
 */
-framework.hears('card me', function(bot, trigger) {
-  console.log("someone asked for a card");
+framework.hears('explain', function(bot, trigger) {
+  let explanation = 'Hello an0n'+'\n'+'I am a simple bot that was built to show how easy it is to get a Webex bot up and running and talking to other services, like APIs.\n'+'I am using CoinGecko\'s API to obtain all of the information I respond with.\n'+'My source code is available on here on [GitHub](https://github.com/WebexSamples)';
+  bot.say('markdown', explanation);
   responded = true;
-  let avatar = trigger.person.avatar;
-
-  cardJSON.body[0].columns[0].items[0].url = (avatar) ? avatar : `${config.webhookUrl}/missing-avatar.jpg`;
-  cardJSON.body[0].columns[0].items[1].text = trigger.person.displayName;
-  cardJSON.body[0].columns[0].items[2].text = trigger.person.emails[0];
-  bot.sendCard(cardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
 });
 
-/* On mention reply example
-ex User enters @botname 'reply' phrase, the bot will post a threaded reply
-*/
-framework.hears('reply', function(bot, trigger) {
-  console.log("someone asked for a reply.  We will give them two.");
+framework.hears('tell em bitcoin', function(bot, trigger) {
+  console.log("someone asked for a reply about bitcoin's price");
   responded = true;
-  bot.reply(trigger.message,
-    'This is threaded reply sent using the `bot.reply()` method.',
-    'markdown');
-  var msg_attach = {
-    text: "This is also threaded reply with an attachment sent via bot.reply(): ",
-    file: 'https://media2.giphy.com/media/dTJd5ygpxkzWo/giphy-downsized-medium.gif'
-  };
-  bot.reply(trigger.message, msg_attach);
-});
-
-
-/* On mention with prices
-ex User enters @botname 'prices' phrase,- bot will repond with card that offers currencies and returns price
-https://developer.webex.com/docs/api/guides/cards
-*/
-framework.hears('prices', function(bot, trigger) {
-  console.log("someone asked for a card");
-  responded = true;
-  bot.sendCard(coinCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
-});
-/* On mention with prices
-ex User enters @botname 'wen moon'  or other phrase below,- bot will repond with card that gives "moonlinessz" rating and market data printout in markdown
-https://developer.webex.com/docs/api/guides/cards
-*/
-framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, trigger) {
-  console.log("a moonboi has entered the chat");
-  responded = true;
-  
-  bot.sendCard(moonCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
-});
-
-// Process an Action.Submit button press
-framework.on('attachmentAction', function(bot, trigger) {
-  // console.log("bot line 452: ", bot, "trigger line 452: ", trigger)
-  if (trigger.type != 'attachmentAction') {
-    throw new Error(`Invaid trigger type: ${trigger.type} in attachmentAction handler`);
-  }
-  let attachmentAction = trigger.attachmentAction;
-  console.log(attachmentAction);
-  if (attachmentAction.inputs.currency) {
-    getCurrency(bot, attachmentAction);
-  } else {
-    getMoonlinessz(bot, attachmentAction, trigger);
-  }
-  responded = true;
-
-});
-
-const getCurrency = (bot, attachment) => {
-  const options = {
-    method: 'GET',
-    hostname: 'api.coingecko.com',
-    path: `/api/v3/coins/${attachment.inputs.currency}`,
-    port: 443,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-  const req = https.request(options, (res) => {
-    console.log(`statusCode: ${res.statusCode}`);
-    let data = '';
-    res.on('data', (chunk) => {
-      data += chunk;
-    });
-    res.on('end', async () => {
-      console.log(` price fetched successfully`);
-      price = await JSON.parse(data).market_data.current_price[`${attachment.inputs.pair}`];
-      console.log('price:', price);
-      let symbol = '';
-      symbol = {
-        'usd': '$',
-        'eur': '€',
-        'cny': '¥',
-        'inr': '₹'
-      };
-
-      bot.say(`The current price of 1 ${attachment.inputs.currency == 'matic-network'? 'Matic': attachment.inputs.currency.charAt(0).toUpperCase() + attachment.inputs.currency.slice(1)} is ${symbol[attachment.inputs.pair]}${price} ${attachment.inputs.pair.toUpperCase()}`);
-    })
-    res.on('error', (e) => {
-      console.error(`Error: ${e.message}`);
-    });
+  getCurrency(bot, trigger, 'bitcoin');
   });
-  req.end();
-};
-
-/*This function will take bot instance and trigger object as parameters and return moonlinessz, bro */
-const getMoonlinessz = (bot, attachment, trigger) => {
-  let currencyPair = attachment.inputs.currencyPair;
-  const options = {
-    method: 'GET',
-    hostname: 'api.coingecko.com',
-    path: `/api/v3/coins/${attachment.inputs.coinId}`,
-    port: 443,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-  const req = https.request(options, (res) => {
-    console.log(`statusCode: ${res.statusCode}`);
-    let data = '';
-    res.on('data', (chunk) => {
-      data += chunk;
-    });
-    res.on('end', async () => {
-      // parse API 'string' response to {JSON} object
-      const dataJson = await JSON.parse(data);
-      // save moon data in lil package here
-      let moonData = {
-        currentPrice: dataJson.market_data.current_price[currencyPair],
-        ath: dataJson.market_data.ath[currencyPair],
-        athChange: dataJson.market_data.ath_change_percentage[currencyPair],
-        athDate: dataJson.market_data.ath_date[currencyPair],
-        atl: dataJson.market_data.atl[currencyPair],
-        atlChange: dataJson.market_data.atl_change_percentage[currencyPair],
-        atlDate: dataJson.market_data.atl_date[currencyPair],
-        priceChange60Day: dataJson.market_data.price_change_percentage_60d,
-        moonlinessz: ''
-        
-      };
-      // add moonlinessz opinion after some processing
-      if(moonData.priceChange60Day > 0) {
-        moonData.moonlinessz = 'WAGMI';
-      } else {
-        moonData.moonlinessz = 'NGMI';
-      };
-      let msg_attach = {
-        text: moonData.moonlinessz,
-        file: `${dataJson.image.large}`
-      };
-      bot.say(msg_attach);
-      bot.say('markdown', '**moon report**');
-      
-      console.log(` moon data fetched successfully: moonData: `, moonData);
-      
-    });
-    res.on('error', (e) => {
-      console.error(`Error: ${e.message}`);
-    });
-  });
-  req.end();
-};
 
 
-
+framework.hears('tell em ethereum', function(bot, trigger) {
+  console.log("someone asked for a reply about ethereum's price");
+  responded = true;
+  getCurrency(bot, trigger, 'ethereum');
+});
+/* On mention tell em ... example
+ex User enters @botname 'tell em (bitcoin | ethereum)' phrase, the bot will post a threaded reply. For use within a thread
+*/
 /* On mention bitcoin example
 ex User enters @botname 'bitcoin' phrase, the bot will respond with the current price of bitcoin in USD
 */
@@ -636,11 +407,191 @@ framework.hears('ethereum', function(bot, trigger) {
     });
   });
   req.end();
-  // bot.say(`The current price of Bitcoin is ${price}`);
-})
-/* On mention with unexpected bot command
-   Its a good practice is to gracefully handle unexpected input
+});
+
+/* On mention with prices
+ex User enters @botname 'prices' phrase,- bot will repond with card that offers currencies and returns price
+https://developer.webex.com/docs/api/guides/cards
 */
+framework.hears('prices', function(bot, trigger) {
+  console.log("someone asked for a prices card");
+  responded = true;
+  bot.sendCard(coinCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
+});
+/* On mention with wen moon
+ex User enters @botname 'wen moon'  or other phrase below,- bot will repond with card that gives "moonlinessz" rating and market data printout
+https://developer.webex.com/docs/api/guides/cards
+*/
+framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, trigger) {
+  console.log("a moonboi has entered the chat");
+  responded = true;
+  
+  bot.sendCard(moonCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards. Im going to leave this text here');
+});
+
+// Process an Action.Submit button press
+framework.on('attachmentAction', function(bot, trigger) {
+  if (trigger.type != 'attachmentAction') {
+    throw new Error(`Invaid trigger type: ${trigger.type} in attachmentAction handler`);
+  }
+  let attachmentAction = trigger.attachmentAction;
+  if (attachmentAction.inputs.currency || !attachmentAction.inputs.currencyPair) {
+    getCurrency(bot, attachmentAction);
+  } else {
+    getMoonlinessz(bot, attachmentAction, trigger);
+  };
+  responded = true;
+
+});
+
+const getCurrency = (bot, attachment, path) => {
+  if (path) {
+    let trigger = attachment;
+      const options = {
+      method: 'GET',
+      hostname: 'api.coingecko.com',
+      path: `/api/v3/coins/${path}`,
+      port: 443,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+    const req = https.request(options, (res) => {
+      console.log(`statusCode: ${res.statusCode}`);
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', async () => {
+        console.log(` price fetched successfully`);
+        let price = await JSON.parse(data).market_data.current_price.usd;
+        bot.reply(trigger.message, `The current price of 1 ${JSON.parse(data).name} is $${price} USD`);
+      })
+      res.on('error', (e) => {
+        console.error(`Error: ${e.message}`);
+      });
+    });
+    req.end();
+  } else ;//why is this semi-colon here and why does it not break this whole file? I guess i need to look at the docs for ES6? tried replacing it with a '{' but that DOES break this file..?
+     const options = {
+      method: 'GET',
+      hostname: 'api.coingecko.com',
+      path: `/api/v3/coins/${attachment.inputs.currency ?attachment.inputs.currency : 'bitcoin'}`,
+      port: 443,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+  };
+  const req = https.request(options, (res) => {
+    console.log(`statusCode: ${res.statusCode}`);
+    let data = '';
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+    res.on('end', async () => {
+      let price;
+      console.log(` price fetched successfully`);
+      if (attachment.inputs.pair) {
+        price = await JSON.parse(data).market_data.current_price[`${attachment.inputs.pair}`];} else {
+        price = await JSON.parse(data).market_data.current_price.usd;
+        };
+      let symbol = {
+        'usd': '$',
+        'eur': '€',
+        'cny': '¥',
+        'inr': '₹'
+      };
+      bot.say(`The current price of 1 ${JSON.parse(data).name} is ${attachment.inputs.pair ? symbol[attachment.inputs.pair]: symbol.usd}${price} ${attachment.inputs.pair? attachment.inputs.pair.toUpperCase():'USD'}`);
+      bot.censor(attachment.messageId);
+    })
+    res.on('error', (e) => {
+      console.error(`Error: ${e.message}`);
+    });
+  });
+  req.end();
+  };
+   
+/*This function will take bot instance and trigger object as parameters and return moonlinessz, bro */
+const getMoonlinessz = (bot, attachment) => {
+  if (attachment.inputs.coinId == '') {
+    bot.say(`Please input a coin & currency pair using the card, e.g. 'Bitcoin, US Dollar`);
+  } else {
+    let currencyPair = attachment.inputs.currencyPair;
+  
+  let symbol = {
+        'usd': '$',
+        'eur': '€',
+        'cny': '¥',
+        'inr': '₹',
+        'gbp': '£',
+        'aud': '$',
+        'cad': '$',
+        'hkd': '$',
+        'chf': 'Fr.',
+        'jpy': '¥',
+        'nzd': '$',
+      };
+  const options = {
+    method: 'GET',
+    hostname: 'api.coingecko.com',
+    path: `/api/v3/coins/${attachment.inputs.coinId}`,
+    port: 443,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+  const req = https.request(options, (res) => {
+    console.log(`statusCode: ${res.statusCode}`);
+    let data = '';
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+    res.on('end', async () => {
+      // parse API 'string' response to {JSON} object
+      const dataJson = await JSON.parse(data);
+      // save moon data in lil package here
+      let moonData = {
+        currentPrice: dataJson.market_data.current_price[currencyPair],
+        ath: dataJson.market_data.ath[currencyPair],
+        athChange: dataJson.market_data.ath_change_percentage[currencyPair],
+        athDate: dataJson.market_data.ath_date[currencyPair],
+        atl: dataJson.market_data.atl[currencyPair],
+        atlChange: dataJson.market_data.atl_change_percentage[currencyPair],
+        atlDate: dataJson.market_data.atl_date[currencyPair],
+        priceChange60Day: dataJson.market_data.price_change_percentage_60d,
+        moonlinessz: ''
+        
+      };
+      // add moonlinessz opinion after some processing
+      if(moonData.priceChange60Day < 0) {
+        moonData.moonlinessz = `I dunno, broh. Ever tried hopium? ${dataJson.name}'s current price is ${symbol[attachment.inputs.currencyPair]}${moonData.currentPrice}; which is down ${moonData.athChange}% from its all-time high of ${symbol[attachment.inputs.currencyPair]}${moonData.ath} on ${moonData.athDate.slice(0,10)} and down ${moonData.priceChange60Day}% in the past 60 days.`;
+      } else {
+        moonData.moonlinessz = `Looks like FOMO, time to APE in! (DYOR, lulz) ${dataJson.name}'s current price is ${symbol[attachment.inputs.currencyPair]}${moonData.currentPrice}; which is up ${moonData.priceChange60Day}% in the past 60 days and ${moonData.atlChange}% from it's all time low of ${symbol[attachment.inputs.currencyPair]}${moonData.atl} on ${moonData.atlDate.slice(0,10)}.`;
+      };
+      
+      let msg_attach = {
+        text: moonData.moonlinessz,
+        file: `${dataJson.image.large}`
+      };
+      bot.say(msg_attach);
+      bot.say('markdown', '***🚀moon report🌕***\n\n'+'***'+`${dataJson.name}`+'***');
+      bot.censor(attachment.messageId);
+      
+      console.log(` moon data fetched successfully: moonData: `, moonData);
+      
+    });
+    res.on('error', (e) => {
+      console.error(`Error: ${e.message}`);
+    });
+  });
+  req.end();
+  }
+  
+};
+
+
+
+
 framework.hears(/.*/, function(bot, trigger) {
   // This will fire for any input so only respond if we haven't already
   if (!responded) {
@@ -658,10 +609,9 @@ function sendHelp(bot) {
     '2. **bitcoin**  (fetches the current price of 1 BTC in USD) \n' +
     '3. **ethereum**  (fetches the current price of 1 ETH in USD) \n' +
     '4. **prices** (pick a coin/currency pair and check latest price) \n' +
-    '5. **say hi to everyone** (everyone gets a greeting using a call to the Webex SDK) \n' +
-    '6. ***ath/ wen moon*** \n' +
-    '7. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
-    '8. **help** (what you are reading now)');
+    '5. ***ath/ wen moon*** get moon report \n' + 
+    '6. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
+    '7. **help** (what you are reading now)');
 }
 
 
