@@ -5,6 +5,7 @@ var webhook = require('webex-node-bot-framework/webhook');
 var https = require('https');
 var express = require('express');
 var bodyParser = require('body-parser');
+var sha1 = require('js-sha1');
 var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
@@ -68,7 +69,7 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function(bot, 
 let coinCardJSON = {
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "version": "1.2",
+  "version": "1.3",
   "body": [
     {
       "type": "RichTextBlock",
@@ -90,6 +91,8 @@ let coinCardJSON = {
     {
       "type": "Input.ChoiceSet",
       "placeholder": "Bitcoin",
+      "isRequired": true,
+      "errorMessage": "Please Choose a Coin",
       "spacing": "Medium",
       "id": "currency",
       "choices": [
@@ -138,6 +141,8 @@ let coinCardJSON = {
         }
       ],
       "placeholder": "USD",
+      "isRequired": true,
+      "errorMessage": "Please choose a currency pair.",
       "id": "pair"
     },
     {
@@ -157,7 +162,7 @@ let coinCardJSON = {
 let moonCardJSON = {
     "type": "AdaptiveCard",
     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-    "version": "1.2",
+    "version": "1.3",
     "body": [
         {
             "type": "TextBlock",
@@ -253,6 +258,8 @@ let moonCardJSON = {
                 }
             ],
             "placeholder": "Pick a coin",
+            "isRequired": true,
+            "errorMessage": "Please pick your m00nshot, an0n",
             "id": "coinId"
         },
         {
@@ -300,6 +307,8 @@ let moonCardJSON = {
                 }
             ],
             "placeholder": "Currency pair",
+            "isRequired": true,
+            "errorMessage": "Please choose a currency pair.",
             "id": "currencyPair",
             "value": "usd"
         },
@@ -316,6 +325,40 @@ let moonCardJSON = {
     ]
 };
 
+// this is a card for the hash this response 
+let hashCardJSON = {
+    "type": "AdaptiveCard",
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.3",
+    "body": [
+        {
+            "type": "TextBlock",
+            "text": "Enter Text To Irreversibly Encrypt",
+            "wrap": true,
+            "id": "title",
+            "fontType": "Monospace",
+            "size": "Medium",
+            "weight": "Bolder",
+            "color": "Default",
+            "isSubtle": false
+        },
+        {
+            "type": "Input.Text",
+            "placeholder": "Enter Your Text",
+            "isRequired": true,
+            "errorMessage": "Enter some Text or kick rocks, pal. I'm a busy Bot.",
+            "id": "hashthis",
+            "label": "",
+            "inlineAction": {
+                "type": "Action.Submit",
+                "title": "Encrypt",
+                "associatedInputs": "auto",
+                "id": "hashbutton"
+            }
+        }
+    ]
+};
+
 /* On mention explain
 User enters @botname 'explain' bot will respond with a simple explanation of what it's purpose is 
 */
@@ -324,7 +367,9 @@ framework.hears('explain', function(bot, trigger) {
   bot.say('markdown', explanation);
   responded = true;
 });
-
+/* On mention tell em ... example
+ex User enters @botname 'tell em (bitcoin | ethereum)' phrase, the bot will post a threaded reply. For use within a thread
+*/
 framework.hears('tell em bitcoin', function(bot, trigger) {
   console.log("someone asked for a reply about bitcoin's price");
   responded = true;
@@ -337,14 +382,13 @@ framework.hears('tell em ethereum', function(bot, trigger) {
   responded = true;
   getCurrency(bot, trigger, 'ethereum');
 });
-/* On mention tell em ... example
-ex User enters @botname 'tell em (bitcoin | ethereum)' phrase, the bot will post a threaded reply. For use within a thread
-*/
+
 /* On mention bitcoin example
 ex User enters @botname 'bitcoin' phrase, the bot will respond with the current price of bitcoin in USD
 */
 framework.hears('bitcoin', function(bot, trigger) {
   console.log("someone wants to check the price of bitcoin");
+  console.log('line 357',trigger.message.text)
   responded = true;
   let price = '';
   const options = {
@@ -418,6 +462,14 @@ framework.hears('prices', function(bot, trigger) {
   responded = true;
   bot.sendCard(coinCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
 });
+/* On mention with hash this, etc
+ex User enters @botname 'hash this' phrase will return sha1 hash of the message after the command phrase with 0x appended to the front, EVM style
+*/
+framework.hears(/(hash|encrypt|hide) (this|it)|sha1/i, function(bot, trigger){
+  console.log("a cipherpunk has entered the chat");
+  responded = true;
+  bot.sendCard(hashCardJSON, 'This is a hash card');
+});
 /* On mention with wen moon
 ex User enters @botname 'wen moon'  or other phrase below,- bot will repond with card that gives "moonlinessz" rating and market data printout
 https://developer.webex.com/docs/api/guides/cards
@@ -435,7 +487,10 @@ framework.on('attachmentAction', function(bot, trigger) {
     throw new Error(`Invaid trigger type: ${trigger.type} in attachmentAction handler`);
   }
   let attachmentAction = trigger.attachmentAction;
-  if (attachmentAction.inputs.currency || !attachmentAction.inputs.currencyPair) {
+  console.log('line 490 attachmentAction:', attachmentAction);
+  if (attachmentAction.inputs.hashthis) {
+    getHash(bot, attachmentAction);
+  } else if (attachmentAction.inputs.currency || !attachmentAction.inputs.currencyPair) {
     getCurrency(bot, attachmentAction);
   } else {
     getMoonlinessz(bot, attachmentAction, trigger);
@@ -472,11 +527,11 @@ const getCurrency = (bot, attachment, path) => {
       });
     });
     req.end();
-  } else ;//why is this semi-colon here and why does it not break this whole file? I guess i need to look at the docs for ES6? tried replacing it with a '{' but that DOES break this file..?
-     const options = {
+  } else {
+         const options = {
       method: 'GET',
       hostname: 'api.coingecko.com',
-      path: `/api/v3/coins/${attachment.inputs.currency ?attachment.inputs.currency : 'bitcoin'}`,
+      path: `/api/v3/coins/${attachment.inputs.currency}`,
       port: 443,
       headers: {
         'Content-Type': 'application/json'
@@ -491,17 +546,14 @@ const getCurrency = (bot, attachment, path) => {
     res.on('end', async () => {
       let price;
       console.log(` price fetched successfully`);
-      if (attachment.inputs.pair) {
-        price = await JSON.parse(data).market_data.current_price[`${attachment.inputs.pair}`];} else {
-        price = await JSON.parse(data).market_data.current_price.usd;
-        };
+      price = await JSON.parse(data).market_data.current_price[`${attachment.inputs.pair}`]
       let symbol = {
         'usd': '$',
         'eur': '€',
         'cny': '¥',
         'inr': '₹'
       };
-      bot.say(`The current price of 1 ${JSON.parse(data).name} is ${attachment.inputs.pair ? symbol[attachment.inputs.pair]: symbol.usd}${price} ${attachment.inputs.pair? attachment.inputs.pair.toUpperCase():'USD'}`);
+      bot.say(`The current price of 1 ${JSON.parse(data).name} is ${symbol[attachment.inputs.pair]}${price} ${attachment.inputs.pair.toUpperCase()}`);
       bot.censor(attachment.messageId);
     })
     res.on('error', (e) => {
@@ -510,13 +562,12 @@ const getCurrency = (bot, attachment, path) => {
   });
   req.end();
   };
+
+};
    
 /*This function will take bot instance and trigger object as parameters and return moonlinessz, bro */
 const getMoonlinessz = (bot, attachment) => {
-  if (attachment.inputs.coinId == '') {
-    bot.say(`Please input a coin & currency pair using the card, e.g. 'Bitcoin, US Dollar`);
-  } else {
-    let currencyPair = attachment.inputs.currencyPair;
+  let currencyPair = attachment.inputs.currencyPair;
   
   let symbol = {
         'usd': '$',
@@ -562,7 +613,7 @@ const getMoonlinessz = (bot, attachment) => {
         moonlinessz: ''
         
       };
-      // add moonlinessz opinion after some processing
+      // add moonlinessz opinion after some big brain processing
       if(moonData.priceChange60Day < 0) {
         moonData.moonlinessz = `I dunno, broh. Ever tried hopium? ${dataJson.name}'s current price is ${symbol[attachment.inputs.currencyPair]}${moonData.currentPrice}; which is down ${moonData.athChange}% from its all-time high of ${symbol[attachment.inputs.currencyPair]}${moonData.ath} on ${moonData.athDate.slice(0,10)} and down ${moonData.priceChange60Day}% in the past 60 days.`;
       } else {
@@ -585,10 +636,18 @@ const getMoonlinessz = (bot, attachment) => {
     });
   });
   req.end();
-  }
   
 };
 
+const getHash = (bot, attachment) => {
+  let msgArr = attachment.inputs.hashthis.split(/\s+/);
+  // console.log('line 444: msgArr[at]: ', msgArr.splice(at), 'at: ', at);
+  console.log('line 645 inputs: ', msgArr);
+  console.log('line 646 text before hash: ', msgArr.join(''))
+  bot.say('Here\'s your hashed message: 0x'+ sha1(msgArr.join('')));
+  bot.censor(attachment.messageId);
+  
+}
 
 
 
@@ -609,9 +668,10 @@ function sendHelp(bot) {
     '2. **bitcoin**  (fetches the current price of 1 BTC in USD) \n' +
     '3. **ethereum**  (fetches the current price of 1 ETH in USD) \n' +
     '4. **prices** (pick a coin/currency pair and check latest price) \n' +
-    '5. ***ath/ wen moon*** get moon report \n' + 
+    '5. **ath/ wen moon** get moon report \n' + 
     '6. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
-    '7. **help** (what you are reading now)');
+    '7. **(hash it | sha1) <insert message>** get a sha1 encypted version of your message' +
+    '8. **help** (what you are reading now)');
 }
 
 
