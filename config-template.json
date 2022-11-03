@@ -1,0 +1,6 @@
+**Change the name of this file to config.json and delete this line***
+{
+    "webhookUrl": "http://_REPLACE_THIS_WITH_NGROK_OR_REPLIT_URL_.ngrok.io",
+    "token": "REPLACE_THIS_WITH_YOUR_BOT_API_KEY",
+    "port": 7001
+}

@@ -8,7 +8,6 @@ var bodyParser = require('body-parser');
 var sha1 = require('js-sha1');
 var app = express();
 app.use(bodyParser.json());
-app.use(express.static('images'));
 const config = require("./config.json");
 
 // init framework
@@ -57,10 +56,10 @@ let responded = false;
 /* On mention with command
 ex User enters @botname help, the bot will write back in markdown
 */
-framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function(bot, trigger) {
+framework.hears(/help|what can i (do|say)|what (can|do) you do/i, (bot, trigger) => {
   console.log(`someone needs help! They asked ${trigger.text}`);
   responded = true;
-  bot.say(`Hello ${trigger.person.displayName}.`)
+  bot.say(`Hello ${trigger.person.displayName}. AKA: ${sha1(trigger.person.displayName)}`)
     .then(() => sendHelp(bot))
     .catch((e) => console.error(`Problem in help hander: ${e.message}`));
 });
@@ -362,22 +361,22 @@ let hashCardJSON = {
 /* On mention explain
 User enters @botname 'explain' bot will respond with a simple explanation of what it's purpose is 
 */
-framework.hears('explain', function(bot, trigger) {
-  let explanation = 'Hello an0n'+'\n'+'I am a simple bot that was built to show how easy it is to get a Webex bot up and running and talking to other services, like APIs.\n'+'I am using CoinGecko\'s API to obtain all of the information I respond with.\n'+'My source code is available on here on [GitHub](https://github.com/WebexSamples)';
+framework.hears('explain', (bot, trigger) => {
+  let explanation = '***Hello an0n***'+'\n'+'*'+sha1(trigger.person.displayName)+'*'+'\n'+'I am a simple bot that was built to show how easy it is to use [`webex-node-bot-framework`](https://github.com/WebexCommunity/webex-node-bot-framework) to get a Webex bot up and running and talking to other services, like APIs.\n'+'I am using CoinGecko\'s API to obtain all of the coin information I respond with, and an npm package to run a sha1 alg for the `hash it` command.\n'+'My source code is available here on [GitHub](https://github.com/WebexSamples).';
   bot.say('markdown', explanation);
   responded = true;
 });
 /* On mention tell em ... example
 ex User enters @botname 'tell em (bitcoin | ethereum)' phrase, the bot will post a threaded reply. For use within a thread
 */
-framework.hears('tell em bitcoin', function(bot, trigger) {
+framework.hears('tell em btc', (bot, trigger) => {
   console.log("someone asked for a reply about bitcoin's price");
   responded = true;
   getCurrency(bot, trigger, 'bitcoin');
   });
 
 
-framework.hears('tell em ethereum', function(bot, trigger) {
+framework.hears('tell em eth', (bot, trigger) => {
   console.log("someone asked for a reply about ethereum's price");
   responded = true;
   getCurrency(bot, trigger, 'ethereum');
@@ -386,7 +385,7 @@ framework.hears('tell em ethereum', function(bot, trigger) {
 /* On mention bitcoin example
 ex User enters @botname 'bitcoin' phrase, the bot will respond with the current price of bitcoin in USD
 */
-framework.hears('bitcoin', function(bot, trigger) {
+framework.hears('bitcoin', (bot, trigger) => {
   console.log("someone wants to check the price of bitcoin");
   console.log('line 357',trigger.message.text)
   responded = true;
@@ -417,11 +416,10 @@ framework.hears('bitcoin', function(bot, trigger) {
     });
   });
   req.end();
-  // bot.say(`The current price of Bitcoin is ${price}`);
 })
 /* On mention ethereum example
 ex User enters @botname 'ethereum' phrase, the bot will respond with the current price of ethereum in USD*/
-framework.hears('ethereum', function(bot, trigger) {
+framework.hears('ethereum', (bot, trigger) => {
   console.log("someone wants to check the price of ethereum");
   responded = true;
   let price = '';
@@ -457,7 +455,7 @@ framework.hears('ethereum', function(bot, trigger) {
 ex User enters @botname 'prices' phrase,- bot will repond with card that offers currencies and returns price
 https://developer.webex.com/docs/api/guides/cards
 */
-framework.hears('prices', function(bot, trigger) {
+framework.hears('prices', (bot, trigger) => {
   console.log("someone asked for a prices card");
   responded = true;
   bot.sendCard(coinCardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
@@ -465,8 +463,8 @@ framework.hears('prices', function(bot, trigger) {
 /* On mention with hash this, etc
 ex User enters @botname 'hash this' phrase will return sha1 hash of the message after the command phrase with 0x appended to the front, EVM style
 */
-framework.hears(/(hash|encrypt|hide) (this|it)|sha1/i, function(bot, trigger){
-  console.log("a cipherpunk has entered the chat");
+framework.hears(/(hash|encrypt|hide) (this|it)|sha1/i, (bot, trigger) => {
+  console.log("a cypherpunk has entered the chat");
   responded = true;
   bot.sendCard(hashCardJSON, 'This is a hash card');
 });
@@ -474,7 +472,7 @@ framework.hears(/(hash|encrypt|hide) (this|it)|sha1/i, function(bot, trigger){
 ex User enters @botname 'wen moon'  or other phrase below,- bot will repond with card that gives "moonlinessz" rating and market data printout
 https://developer.webex.com/docs/api/guides/cards
 */
-framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, trigger) {
+framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, (bot, trigger) => {
   console.log("a moonboi has entered the chat");
   responded = true;
   
@@ -482,7 +480,7 @@ framework.hears(/ath|(when|wen) moon|(number|price|line) go up/i, function(bot, 
 });
 
 // Process an Action.Submit button press
-framework.on('attachmentAction', function(bot, trigger) {
+framework.on('attachmentAction', (bot, trigger) => {
   if (trigger.type != 'attachmentAction') {
     throw new Error(`Invaid trigger type: ${trigger.type} in attachmentAction handler`);
   }
@@ -498,7 +496,7 @@ framework.on('attachmentAction', function(bot, trigger) {
   responded = true;
 
 });
-
+/*This function will take bot instance, trigger object (attachment), and optional path string as parameters and return current coin/currency pair, bro */
 const getCurrency = (bot, attachment, path) => {
   if (path) {
     let trigger = attachment;
@@ -519,7 +517,7 @@ const getCurrency = (bot, attachment, path) => {
       });
       res.on('end', async () => {
         console.log(` price fetched successfully`);
-        let price = await JSON.parse(data).market_data.current_price.usd;
+        let price = JSON.parse(data).market_data.current_price.usd;
         bot.reply(trigger.message, `The current price of 1 ${JSON.parse(data).name} is $${price} USD`);
       })
       res.on('error', (e) => {
@@ -565,7 +563,7 @@ const getCurrency = (bot, attachment, path) => {
 
 };
    
-/*This function will take bot instance and trigger object as parameters and return moonlinessz, bro */
+/*This function will take bot instance and trigger object (attachment) as parameters and return moonlinessz, bro */
 const getMoonlinessz = (bot, attachment) => {
   let currencyPair = attachment.inputs.currencyPair;
   
@@ -638,12 +636,12 @@ const getMoonlinessz = (bot, attachment) => {
   req.end();
   
 };
-
+/*This function will take bot instance and trigger object (attachment) as parameters and return sha1 hash of user input minus white space with '0x' appended to the front, bro */
 const getHash = (bot, attachment) => {
   let msgArr = attachment.inputs.hashthis.split(/\s+/);
   // console.log('line 444: msgArr[at]: ', msgArr.splice(at), 'at: ', at);
-  console.log('line 645 inputs: ', msgArr);
-  console.log('line 646 text before hash: ', msgArr.join(''))
+  console.log('line 643 inputs: ', msgArr);
+  console.log('line 644 text before hash: ', msgArr.join(''))
   bot.say('Here\'s your hashed message: 0x'+ sha1(msgArr.join('')));
   bot.censor(attachment.messageId);
   
@@ -669,8 +667,8 @@ function sendHelp(bot) {
     '3. **ethereum**  (fetches the current price of 1 ETH in USD) \n' +
     '4. **prices** (pick a coin/currency pair and check latest price) \n' +
     '5. **ath/ wen moon** get moon report \n' + 
-    '6. **tell em (bitcoin | ethereum)** (have bot reply to your message with the current price you request) \n' +
-    '7. **(hash it | sha1) <insert message>** get a sha1 encypted version of your message' +
+    '6. **tell em (btc | eth)** (have bot reply to your message with the current price you request) \n' +
+    '7. **(hash it | sha1)** get a sha1 encypted version of your message' +
     '8. **help** (what you are reading now)');
 }
 
